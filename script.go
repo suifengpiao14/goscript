@@ -16,11 +16,45 @@ type Script struct {
 	Code     string `json:"code"`
 }
 
+type Scripts []Script
+
+func (ss Scripts) GroupByLanguage() (groupd map[string]Scripts) {
+	groupd = map[string]Scripts{}
+	for _, script := range ss {
+		if _, ok := groupd[script.Language]; !ok {
+			groupd[script.Language] = make(Scripts, 0)
+		}
+		groupd[script.Language] = append(groupd[script.Language], script)
+	}
+	return groupd
+}
+
 type ScriptI interface {
 	Language() string
 	Compile() (err error)
+	WriteCode(codes ...string)
 	Run(script string) (out string, err error)
 	CallFuncScript(funcName string, input string) (callFuncScript string) //最终调用函数代码
+}
+
+type ScriptIs []ScriptI
+
+func (sis *ScriptIs) Add(ss ...ScriptI) {
+	*sis = append(*sis, ss...)
+}
+
+var (
+	ERROR_NOT_FOUND_SCRIPTI_BY_LANGUAGE = errors.New("not found script by language")
+)
+
+func (sis *ScriptIs) GetByLanguage(language string) (scriptI ScriptI, err error) {
+	for _, s := range *sis {
+		if strings.EqualFold(language, s.Language()) {
+			return s, nil
+		}
+	}
+	err = errors.WithMessagef(ERROR_NOT_FOUND_SCRIPTI_BY_LANGUAGE, "language :%s", language)
+	return nil, err
 }
 
 func NewScriptEngine(language string) (scriptI ScriptI, err error) {
