@@ -1,6 +1,7 @@
 package goscript
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -34,7 +35,8 @@ type ScriptI interface {
 	Compile() (err error)
 	WriteCode(codes ...string)
 	Run(script string) (out string, err error)
-	CallFuncScript(funcName string, input string) (callFuncScript string) //最终调用函数代码
+	CallFuncScript(funcName string, input string) (callFuncScript string)                            //最终调用函数代码
+	GetSymbolFromScript(selector string, dstType reflect.Type) (destSymbol reflect.Value, err error) //从脚本中获取符号
 }
 
 type ScriptIs []ScriptI

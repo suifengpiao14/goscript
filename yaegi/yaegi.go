@@ -2,6 +2,8 @@ package yaegi
 
 import (
 	"fmt"
+	"io/fs"
+	"reflect"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -18,8 +20,10 @@ const (
 )
 
 type ScriptGo struct {
-	engine *interp.Interpreter
-	code   []string
+	engine                *interp.Interpreter
+	code                  []string
+	symbols               map[string]map[string]reflect.Value
+	_SourcecodeFilesystem fs.FS
 }
 
 func (sgo ScriptGo) Language() string {
@@ -31,9 +35,12 @@ func (sgo *ScriptGo) WriteCode(codes ...string) {
 }
 
 func (sgo *ScriptGo) Compile() (err error) {
-	engine := interp.New(interp.Options{})
+	engine := interp.New(interp.Options{
+		SourcecodeFilesystem: sgo._SourcecodeFilesystem,
+	})
 	engine.Use(stdlib.Symbols)
-	engine.Use(Symbols) //注册当前包结构体
+	engine.Use(Symbols)     //注册当前包结构体
+	engine.Use(sgo.symbols) // 使用当前符号
 	for _, code := range sgo.code {
 		_, err = engine.Eval(code)
 		if err != nil {
@@ -42,6 +49,26 @@ func (sgo *ScriptGo) Compile() (err error) {
 		}
 	}
 	sgo.engine = engine
+	return nil
+}
+
+//Use 注册引用
+func (sgo *ScriptGo) Use(symbols map[string]map[string]reflect.Value) {
+	if sgo.symbols == nil {
+		sgo.symbols = symbols
+	}
+	for k, v := range symbols {
+		sgo.symbols[k] = v
+	}
+}
+
+//Use 注册引用
+func (sgo *ScriptGo) SetSourcecodeFilesystem(fs fs.FS) (err error) {
+	if sgo._SourcecodeFilesystem != nil {
+		err = errors.Errorf("SourcecodeFilesystem  has been set up")
+		return err
+	}
+	sgo._SourcecodeFilesystem = fs
 	return nil
 }
 
@@ -67,6 +94,31 @@ func (sgo *ScriptGo) Run(script string) (out string, err error) {
 	}
 	out = rv.String()
 	return out, nil
+}
+
+var (
+	ERROR_GET_SYMBOL_SELECTOR_UNDEFINED = errors.New("undefined selector: ") // 这个文本是固定的，从yaegi/interp 包内拷贝，此处定义成错误，方便调用方判断错误类型
+	ERROR_GET_SYMBOL_CAN_NOT_CONVERT    = errors.New("can not convert: ")
+)
+
+// GetSymbolFromScript 从动态脚本中获取特定符号(对象、函数、变量等)
+func (sgo *ScriptGo) GetSymbolFromScript(selector string, dstType reflect.Type) (destSymbol reflect.Value, err error) {
+	symbolRv, err := sgo.engine.Eval(selector)
+	if err != nil && strings.Contains(err.Error(), ERROR_GET_SYMBOL_SELECTOR_UNDEFINED.Error()) { // 不存在当前元素 时 忽略错误，程序容许只动态实现一部分
+		err = nil
+		return destSymbol, ERROR_GET_SYMBOL_SELECTOR_UNDEFINED
+	}
+
+	if err != nil {
+		err = errors.WithMessage(err, selector)
+		return destSymbol, err
+	}
+	if !symbolRv.CanConvert(dstType) {
+		err = errors.Errorf("dynamic func %s ,must can convert to %s", selector, fmt.Sprintf("%s.%s", dstType.PkgPath(), dstType.Name()))
+		return destSymbol, err
+	}
+	destSymbol = symbolRv.Convert(dstType)
+	return destSymbol, nil
 }
 
 func NewScriptGo() (sgo *ScriptGo) {
