@@ -41,8 +41,19 @@ type ScriptI interface {
 
 type ScriptIs []ScriptI
 
-func (sis *ScriptIs) Add(ss ...ScriptI) {
-	*sis = append(*sis, ss...)
+func (sis *ScriptIs) AddRepalce(ss ...ScriptI) {
+	for _, s := range ss {
+		exists := false
+		for i, s0 := range *sis {
+			if strings.EqualFold(s.Language(), s0.Language()) {
+				(*sis)[i] = s
+				exists = true
+			}
+		}
+		if !exists {
+			*sis = append(*sis, s)
+		}
+	}
 }
 
 var (
