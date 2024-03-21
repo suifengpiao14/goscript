@@ -50,8 +50,7 @@ func (sgo *ScriptGo) Compile() (err error) {
 	engine := interp.New(interp.Options{
 		SourcecodeFilesystem: sgo._SourcecodeFilesystem,
 	})
-	engine.Use(stdlib.Symbols)
-	engine.Use(Symbols)     //注册当前包结构体
+	engine.Use(Symbols)     //注册包结构体,和 stdlib.Symbols 是同一个变量
 	engine.Use(sgo.symbols) // 使用当前符号
 	for _, code := range sgo.code {
 		_, err = engine.Eval(code)
