@@ -157,3 +157,4 @@ var Symbols = stdlib.Symbols
 //go:generate yaegi extract github.com/tidwall/sjson
 //go:generate yaegi extract github.com/spf13/cast
 //go:generate yaegi extract github.com/syyongx/php2go
+//go:generate yaegi extract github.com/suifengpiao14/goscript/yaegi/funcs
