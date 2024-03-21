@@ -41,13 +41,14 @@ type ScriptI interface {
 
 type ScriptIs []ScriptI
 
-func (sis *ScriptIs) AddRepalce(ss ...ScriptI) {
+func (sis *ScriptIs) AddReplace(ss ...ScriptI) {
 	for _, s := range ss {
 		exists := false
 		for i, s0 := range *sis {
 			if strings.EqualFold(s.Language(), s0.Language()) {
 				(*sis)[i] = s
 				exists = true
+				break
 			}
 		}
 		if !exists {

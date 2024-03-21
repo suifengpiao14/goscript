@@ -19,6 +19,18 @@ const (
 	SCRIPT_LANGUAGE_GO = "go"
 )
 
+type OutputDTO struct {
+	Data string
+	Err  error
+}
+
+func init() {
+	Symbols["github.com/suifengpiao14/goscript/yaegi/yaegi"] = map[string]reflect.Value{
+		// type definitions
+		"OutputDTO": reflect.ValueOf((*OutputDTO)(nil)),
+	}
+}
+
 type ScriptGo struct {
 	engine                *interp.Interpreter
 	code                  []string
@@ -82,15 +94,19 @@ func (sgo *ScriptGo) CallFuncScript(funcName string, input string) (callScript s
 }
 
 func (sgo *ScriptGo) Run(script string) (out string, err error) {
-	if sgo.engine == nil {
-		err = sgo.Compile()
+	rv, err := sgo.GetSymbolFromScript(script, nil)
+	if err != nil {
+		return "", err
+	}
+	outputDTOT := reflect.TypeOf(&OutputDTO{})
+	if rv.CanConvert(outputDTOT) {
+		dtoV := rv.Convert(outputDTOT)
+		dto := dtoV.Interface().(*OutputDTO)
+		out, err = dto.Data, dto.Err
 		if err != nil {
 			return "", err
 		}
-	}
-	rv, err := sgo.engine.Eval(script)
-	if err != nil {
-		return "", err
+		return out, nil
 	}
 	out = rv.String()
 	return out, nil
@@ -103,7 +119,13 @@ var (
 
 // GetSymbolFromScript 从动态脚本中获取特定符号(对象、函数、变量等)
 func (sgo *ScriptGo) GetSymbolFromScript(selector string, dstType reflect.Type) (destSymbol reflect.Value, err error) {
-	symbolRv, err := sgo.engine.Eval(selector)
+	if sgo.engine == nil {
+		err = sgo.Compile()
+		if err != nil {
+			return destSymbol, err
+		}
+	}
+	destSymbol, err = sgo.engine.Eval(selector)
 	if err != nil && strings.Contains(err.Error(), ERROR_GET_SYMBOL_SELECTOR_UNDEFINED.Error()) { // 不存在当前元素 时 忽略错误，程序容许只动态实现一部分
 		err = nil
 		return destSymbol, ERROR_GET_SYMBOL_SELECTOR_UNDEFINED
@@ -113,11 +135,14 @@ func (sgo *ScriptGo) GetSymbolFromScript(selector string, dstType reflect.Type) 
 		err = errors.WithMessage(err, selector)
 		return destSymbol, err
 	}
-	if !symbolRv.CanConvert(dstType) {
+	if dstType == nil {
+		return destSymbol, nil
+	}
+	if !destSymbol.CanConvert(dstType) {
 		err = errors.Errorf("dynamic func %s ,must can convert to %s", selector, fmt.Sprintf("%s.%s", dstType.PkgPath(), dstType.Name()))
 		return destSymbol, err
 	}
-	destSymbol = symbolRv.Convert(dstType)
+	destSymbol = destSymbol.Convert(dstType)
 	return destSymbol, nil
 }
 
@@ -132,4 +157,3 @@ var Symbols = stdlib.Symbols
 //go:generate yaegi extract github.com/tidwall/sjson
 //go:generate yaegi extract github.com/spf13/cast
 //go:generate yaegi extract github.com/syyongx/php2go
-//go:generate yaegi extract github.com/suifengpiao14/goscript/yaegi/custom
