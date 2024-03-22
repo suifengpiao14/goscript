@@ -61,8 +61,8 @@ var (
 	ERROR_NOT_FOUND_SCRIPTI_BY_LANGUAGE = errors.New("not found script by language")
 )
 
-func (sis *ScriptIs) GetByLanguage(language string) (scriptI ScriptI, err error) {
-	for _, s := range *sis {
+func (sis ScriptIs) GetByLanguage(language string) (scriptI ScriptI, err error) {
+	for _, s := range sis {
 		if strings.EqualFold(language, s.Language()) {
 			return s, nil
 		}

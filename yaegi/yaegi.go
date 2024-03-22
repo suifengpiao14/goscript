@@ -33,7 +33,7 @@ func init() {
 
 type ScriptGo struct {
 	engine                *interp.Interpreter
-	code                  []string
+	codes                 []string
 	symbols               map[string]map[string]reflect.Value
 	_SourcecodeFilesystem fs.FS
 }
@@ -43,7 +43,7 @@ func (sgo ScriptGo) Language() string {
 }
 
 func (sgo *ScriptGo) WriteCode(codes ...string) {
-	sgo.code = append(sgo.code, codes...)
+	sgo.codes = append(sgo.codes, codes...)
 }
 
 func (sgo *ScriptGo) Compile() (err error) {
@@ -52,7 +52,8 @@ func (sgo *ScriptGo) Compile() (err error) {
 	})
 	engine.Use(Symbols)     //注册包结构体,和 stdlib.Symbols 是同一个变量
 	engine.Use(sgo.symbols) // 使用当前符号
-	for _, code := range sgo.code {
+	for _, code := range sgo.codes {
+		fmt.Println(code)
 		_, err = engine.Eval(code)
 		if err != nil {
 			err = errors.WithMessage(err, "init dynamic go script error")
