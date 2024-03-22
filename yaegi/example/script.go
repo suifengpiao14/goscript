@@ -23,10 +23,6 @@ func CallSetLimit(input string) (outputDTO *yaegi.OutputDTO) {
 	outputDTO = new(yaegi.OutputDTO)
 	{ // 避免局部变量冲突
 		offset, size := SetLimit(index, size)
-		if err != nil {
-			outputDTO.Err = err
-			return outputDTO
-		}
 		out, err = sjson.Set(out, "func.vocabulary.SetLimit.output.offset", offset)
 		if err != nil {
 			outputDTO.Err = err
